@@ -5,7 +5,7 @@ import java.util.*;
 public class Server {
     
     public static void main(String[] args) throws IOException {
-        List<Thread> clients = new ArrayList<Thread>();
+        Map<Integer, Thread> clientsList = new HashMap<Integer, Thread>();
 
         ServerSocket servSocket = new ServerSocket(11350);
 
@@ -14,14 +14,17 @@ public class Server {
 
             try{
                 sock = servSocket.accept();
-                System.out.println("Client connected: " + sock);
+                System.out.println("Client " + sock + " Connected");
 
                 DataInputStream dis = new DataInputStream(sock.getInputStream());
-                DataOutputStream dos = new DataOutputStream(sock.getOutputStream());
+				DataOutputStream dos = new DataOutputStream(sock.getOutputStream());
+				
+				ClientConnection client = new ClientConnection(sock, dis, dos);
 
-                Thread clientThread = new ClientConnection(sock, dis, dos);
-                clientThread.start();
-                clients.add(clientThread);
+				client.start();
+				
+				clientsList.put(client.clientSock.getPort(), client);
+				System.out.println(client);
             }
             catch(Exception ex){
                 sock.close();
@@ -36,25 +39,24 @@ class ClientConnection extends Thread {
 
     final DataInputStream dis;
     final DataOutputStream dos;
-    final Socket sock;
+    final Socket clientSock;
 
     public ClientConnection(Socket sock, DataInputStream dis, DataOutputStream dos) {
-        this.sock = sock;
+        this.clientSock = sock;
         this.dis = dis;
         this.dos = dos;
     }
 
-	public void sendFile() {
+	public void sendFile(File fileToSend) {
 		try{
-			File filename = new File("test.txt");
-			FileInputStream fileStream = new FileInputStream(filename);
+			FileInputStream fileStream = new FileInputStream(fileToSend);
 
-			byte[] buffer = new byte[(int)filename.length()];
+			byte[] buffer = new byte[(int)fileToSend.length()];
 
 			int bytesRead = 0;
 
-			System.out.println("Wysylanie pliku: " + filename + " Do: " + sock.getPort());
-			dos.writeLong(filename.length());
+			System.out.println("Wysylanie pliku: " + fileToSend + " Do: " + clientSock.getPort());
+			dos.writeLong(fileToSend.length());
 
 			while ((bytesRead = fileStream.read(buffer)) > 0) {
 				dos.write(buffer, 0, bytesRead);
@@ -79,19 +81,20 @@ class ClientConnection extends Thread {
 				recevied = dis.readUTF();
 
 				if(recevied.equals("Exit")) {
-					System.out.println(this.sock + " Zarzadal zamkniecia polaczenia");
-					System.out.println("Zamykanie polaczenia...");
-					this.sock.close();
-					System.out.println("Polaczenie zamkniete");
+					System.out.println("Close connection request from: " + this.clientSock.getPort());
+					System.out.println("Closing connection for");
+					this.clientSock.close();
+					System.out.println("Connection Closed");
 					break;
 				}
 
 				switch (recevied) {
 					case "Pobierz" :
-						sendFile();
+						File file = new File("test.txt");
+						sendFile(file);
 						break;
 					default:
-						System.out.println("Zla wartosc: " + recevied);
+						System.out.println("Invalid imput - " + recevied);
 						break;
 				}
 			}
@@ -102,7 +105,7 @@ class ClientConnection extends Thread {
 		try {
 			this.dis.close();
 			this.dos.close();
-			this.sock.close();
+			this.clientSock.close();
 		}
 		catch(IOException ex){
 			ex.printStackTrace();
