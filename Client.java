@@ -8,24 +8,29 @@ public class Client {
 		String fileName = "recTest.txt";
 		String cmd = fileName + "\n";
 		try {
-			OutputStreamWriter sWriter = new OutputStreamWriter(sock.getOutputStream());
+			if(dis.read() == 0){
+				OutputStreamWriter sWriter = new OutputStreamWriter(sock.getOutputStream());
 
-			sWriter.write(cmd, 0, cmd.length());
+				sWriter.write(cmd, 0, cmd.length());
 
-			FileOutputStream fileStream = new FileOutputStream(fileName);
+				FileOutputStream fileStream = new FileOutputStream(fileName);
 
-			while(dis.available() < 4) {}
-			long fileSize = dis.readLong();
+				while(dis.available() < 4) {}
+				long fileSize = dis.readLong();
 
-			byte[] buffer = new byte[(int)fileSize];
+				byte[] buffer = new byte[(int)fileSize];
 
-			while(dis.available()<fileSize) {}
-			System.out.println("Pobieranie Pliku");
-			dis.readFully(buffer);
-			fileStream.write(buffer, 0, (int)fileSize);
-			fileStream.flush();
-			System.out.println("Pobrano plik");
-			fileStream.close();
+				while(dis.available()<fileSize) {}
+				System.out.println("Pobieranie Pliku");
+				dis.readFully(buffer);
+				fileStream.write(buffer, 0, (int)fileSize);
+				fileStream.flush();
+				System.out.println("Pobrano plik");
+				fileStream.close();
+			}else{
+				System.out.println("Error occured on server side");
+			}
+			
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -52,7 +57,7 @@ public class Client {
 				}
 
 				switch (toSend){
-					case "Pobierz" :
+					case "PULL" :
 						downloadFile(sock, dos, dis);
 						break;
 					default:

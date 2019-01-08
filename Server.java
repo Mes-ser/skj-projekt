@@ -24,7 +24,6 @@ public class Server {
 				client.start();
 				
 				clientsList.put(client.clientSock.getPort(), client);
-				System.out.println(client);
             }
             catch(Exception ex){
                 sock.close();
@@ -47,25 +46,26 @@ class ClientConnection extends Thread {
         this.dos = dos;
     }
 
-	public void sendFile(File fileToSend) {
+	public void sendFile(File fileToSend) throws IOException{
 		try{
 			FileInputStream fileStream = new FileInputStream(fileToSend);
-
+			dos.write(0);
 			byte[] buffer = new byte[(int)fileToSend.length()];
 
 			int bytesRead = 0;
 
-			System.out.println("Wysylanie pliku: " + fileToSend + " Do: " + clientSock.getPort());
+			System.out.println("Sending file " + fileToSend + " to Client " + clientSock.getPort());
 			dos.writeLong(fileToSend.length());
 
 			while ((bytesRead = fileStream.read(buffer)) > 0) {
 				dos.write(buffer, 0, bytesRead);
 			}
 			fileStream.close();
-			System.out.println("Wyslano");
+			System.out.println("Data sended to: " + this.clientSock.getPort());
 		}
 		catch (Exception ex) {
 			ex.printStackTrace();
+			dos.write(1);
 		}
 	}
     // tu tworzymy obsluge zapytan od klienta
@@ -73,23 +73,23 @@ class ClientConnection extends Thread {
     public void run() {
 
 		String recevied;
-
-		while(true){
+		boolean exitFlag = false;
+		while(!exitFlag){
 			try {
-				dos.writeUTF("----------\n" + "By pobrac plik wpisz Pobierz\n" + "Wpisz Exit by zamknac polaczenie\n" + "-----------");
+				dos.writeUTF("----------\n" + "Available commands:\nPULL\nPUSH\nGetClients\n" + "-----------");
 
 				recevied = dis.readUTF();
 
 				if(recevied.equals("Exit")) {
 					System.out.println("Close connection request from: " + this.clientSock.getPort());
-					System.out.println("Closing connection for");
+					System.out.println("Closing connection for ");
 					this.clientSock.close();
 					System.out.println("Connection Closed");
 					break;
 				}
 
 				switch (recevied) {
-					case "Pobierz" :
+					case "PULL" :
 						File file = new File("test.txt");
 						sendFile(file);
 						break;
@@ -100,6 +100,7 @@ class ClientConnection extends Thread {
 			}
 			catch (IOException ex) {
 				ex.printStackTrace();
+				exitFlag = true;
 			}
 		}
 		try {
